@@ -4,18 +4,6 @@ import { systemPreferences, shell } from 'electron';
 const router = express.Router();
 
 /**
- * Get the current platform
- */
-router.get('/platform', (req, res) => {
-    res.json({
-        platform: process.platform,
-        isMacOS: process.platform === 'darwin',
-        isWindows: process.platform === 'win32',
-        isLinux: process.platform === 'linux',
-    });
-});
-
-/**
  * Get the current media access status for a given media type
  * 
  * Media types: 'microphone', 'camera', 'screen'
@@ -111,33 +99,6 @@ router.post('/ask-for-media-access', async (req, res) => {
 });
 
 /**
- * Get all permission statuses at once
- */
-router.get('/all-statuses', (req, res) => {
-    // Linux has no unified permission system
-    if (process.platform === 'linux') {
-        return res.json({
-            microphone: 'granted',
-            camera: 'granted',
-            screen: 'granted',
-        });
-    }
-
-    // Windows and macOS both support getMediaAccessStatus
-    try {
-        res.json({
-            microphone: systemPreferences.getMediaAccessStatus('microphone'),
-            camera: systemPreferences.getMediaAccessStatus('camera'),
-            screen: systemPreferences.getMediaAccessStatus('screen'),
-        });
-    } catch (e) {
-        res.status(400).json({
-            error: e.message,
-        });
-    }
-});
-
-/**
  * Open System Settings/Preferences to the privacy pane for the given type
  * 
  * Platform support:
@@ -218,34 +179,6 @@ router.post('/open-system-preferences', async (req, res) => {
     try {
         await shell.openExternal(url);
         res.sendStatus(200);
-    } catch (e) {
-        res.status(400).json({
-            error: e.message,
-        });
-    }
-});
-
-/**
- * Check if the app is a trusted accessibility client (macOS only)
- * 
- * @param prompt - Whether to show a prompt to the user if not trusted
- */
-router.get('/accessibility-status', (req, res) => {
-    const prompt = req.query.prompt === 'true';
-
-    if (process.platform !== 'darwin') {
-        return res.json({
-            result: true,
-            supported: false,
-        });
-    }
-
-    try {
-        const isTrusted = systemPreferences.isTrustedAccessibilityClient(prompt);
-        res.json({
-            result: isTrusted,
-            supported: true,
-        });
     } catch (e) {
         res.status(400).json({
             error: e.message,
